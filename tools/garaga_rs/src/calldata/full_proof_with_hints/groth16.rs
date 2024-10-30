@@ -14,6 +14,7 @@ use lambdaworks_math::field::traits::IsPrimeField;
 use lambdaworks_math::traits::ByteConversion;
 use num_bigint::{BigInt, BigUint, Sign};
 use sha2::{Digest, Sha256};
+use starknet_crypto::Felt;
 
 pub struct Groth16Proof {
     pub a: G1PointBigUint,
@@ -167,13 +168,12 @@ pub fn get_groth16_calldata(
     proof: &Groth16Proof,
     vk: &Groth16VerificationKey,
     curve_id: CurveID,
-) -> Result<Vec<BigUint>, String> {
-    let mut calldata: Vec<BigUint> = Vec::new();
+) -> Result<Vec<Felt>, String> {
+    let mut calldata: Vec<Felt> = Vec::new();
     let risc0_mode = proof.image_id.is_some() && proof.journal.is_some();
-    // Calculate vk_x
+
     let vk_x = calculate_vk_x(vk, &proof.public_inputs, curve_id);
 
-    // MPC calldata
     let mut mpc_values: Vec<BigUint> = vec![];
     mpc_values.extend(vk_x.flatten());
     mpc_values.extend(vk.gamma.flatten());
@@ -188,22 +188,8 @@ pub fn get_groth16_calldata(
 
     let mpc_calldata = mpc_calldata_builder(curve_id as usize, &mpc_values, 2, &mpc_public_pair)?;
 
-    // MSM calldata
-    let msm_calldata = match risc0_mode {
-        false => msm_calldata_builder(
-            &vk.ic
-                .iter()
-                .skip(1)
-                .flat_map(|point| vec![point.x.clone(), point.y.clone()])
-                .collect::<Vec<BigUint>>(),
-            &proof.public_inputs,
-            curve_id as usize,
-            true,
-            false,
-            true,
-            false,
-        )?,
-        true => msm_calldata_builder(
+    let msm_calldata = if risc0_mode {
+        msm_calldata_builder(
             &[
                 vk.ic[3].x.clone(),
                 vk.ic[3].y.clone(),
@@ -219,16 +205,25 @@ pub fn get_groth16_calldata(
             false,
             true,
             true,
-        )?,
+        )?
+    } else {
+        msm_calldata_builder(
+            &vk.ic.iter().skip(1).flat_map(|point| vec![point.x.clone(), point.y.clone()]).collect::<Vec<BigUint>>(),
+            &proof.public_inputs,
+            curve_id as usize,
+            true,
+            false,
+            true,
+            false,
+        )?
     };
 
-    calldata.push(BigUint::from(0u64)); // Len Placeholder.
-    calldata.extend(proof.serialize_to_calldata());
-    calldata.extend(mpc_calldata);
-    calldata.extend(msm_calldata);
+    calldata.push(Felt::from(0u64)); // Len Placeholder
+    calldata.extend(proof.serialize_to_calldata().into_iter().map(Felt::from));
+    calldata.extend(mpc_calldata.into_iter().map(Felt::from));
+    calldata.extend(msm_calldata.into_iter().map(Felt::from));
 
-    // Update length
-    calldata[0] = BigUint::from(calldata.len() - 1);
+    calldata[0] = Felt::from(calldata.len() - 1);
 
     Ok(calldata)
 }
@@ -413,3 +408,4 @@ pub mod risc0_utils {
         receipt_claim.digest()
     }
 }
+

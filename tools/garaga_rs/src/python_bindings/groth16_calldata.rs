@@ -1,9 +1,9 @@
-use super::*;
 use crate::calldata::full_proof_with_hints::groth16;
 use crate::calldata::full_proof_with_hints::groth16::{Groth16Proof, Groth16VerificationKey};
 use crate::definitions::CurveID;
 use pyo3::prelude::*;
 use pyo3::types::PyList;
+use num_bigint::BigUint;
 
 #[pyfunction(signature = (proof, vk, curve_id, image_id=None, journal=None))]
 pub fn get_groth16_calldata(
@@ -23,9 +23,7 @@ pub fn get_groth16_calldata(
         .map(|x| x.extract())
         .collect::<Result<Vec<BigUint>, _>>()?;
 
-    // Handle optional parameters
     let image_id_values = image_id.map(|id| id.to_vec());
-
     let journal_values = journal.map(|j| j.to_vec());
 
     let result = groth16::get_groth16_calldata(
@@ -35,6 +33,7 @@ pub fn get_groth16_calldata(
     )
     .map_err(PyErr::new::<pyo3::exceptions::PyValueError, _>)?;
 
-    let py_list = PyList::new_bound(py, result);
+    let byte_arrays: Vec<Vec<u8>> = result.iter().map(|felt| felt.to_bytes_be().to_vec()).collect();
+    let py_list = PyList::new_bound(py, byte_arrays);
     Ok(py_list.into())
 }
