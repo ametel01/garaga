@@ -16,6 +16,7 @@ use num_bigint::{BigInt, BigUint, Sign};
 use sha2::{Digest, Sha256};
 use starknet_crypto::Felt;
 
+#[derive(Debug)]
 pub struct Groth16Proof {
     pub a: G1PointBigUint,
     pub b: G2PointBigUint,

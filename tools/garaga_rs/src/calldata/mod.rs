@@ -4,11 +4,14 @@ pub mod msm_calldata;
 
 use crate::definitions::{get_modulus_from_curve_id, CurveID};
 use num_bigint::BigUint;
+
+#[derive(Debug)]
 pub struct G1PointBigUint {
     pub x: BigUint,
     pub y: BigUint,
 }
 
+#[derive(Debug)]
 pub struct G2PointBigUint {
     pub x0: BigUint,
     pub x1: BigUint,
