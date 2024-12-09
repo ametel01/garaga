@@ -8,7 +8,7 @@ from garaga.precompiled_circuits.multi_miller_loop import precompute_lines
 from garaga.starknet.cli.utils import create_directory, get_package_version
 from garaga.starknet.groth16_contract_generator.parsing_utils import Groth16VerifyingKey
 
-ECIP_OPS_CLASS_HASH = 0x70C1D1C709C75E3CF51D79D19CF7C84A0D4521F3A2B8BF7BFF5CB45EE0DD289
+ECIP_OPS_CLASS_HASH = 0xC4B7AA28A27B5FB8D7D43928B2A3EE960CF5B4E06CB9AE1EE3F102400B1700
 
 
 def precompute_lines_from_vk(vk: Groth16VerifyingKey) -> StructArray:
@@ -63,7 +63,7 @@ use super::groth16_verifier_constants::{{N_PUBLIC_INPUTS, vk, ic, precomputed_li
 #[starknet::interface]
 trait IGroth16Verifier{curve_id.name}<TContractState> {{
     fn verify_groth16_proof_{curve_id.name.lower()}(
-        ref self: TContractState,
+        self: @TContractState,
         full_proof_with_hints: Span<felt252>,
     ) -> Option<Span<u256>>;
 }}
@@ -79,7 +79,6 @@ mod Groth16Verifier{curve_id.name} {{
     use super::{{N_PUBLIC_INPUTS, vk, ic, precomputed_lines}};
 
     const ECIP_OPS_CLASS_HASH: felt252 = {hex(ecip_class_hash)};
-    use starknet::ContractAddress;
 
     #[storage]
     struct Storage {{}}
@@ -87,7 +86,7 @@ mod Groth16Verifier{curve_id.name} {{
     #[abi(embed_v0)]
     impl IGroth16Verifier{curve_id.name} of super::IGroth16Verifier{curve_id.name}<ContractState> {{
         fn verify_groth16_proof_{curve_id.name.lower()}(
-            ref self: ContractState,
+            self: @ContractState,
             full_proof_with_hints: Span<felt252>,
         ) -> Option<Span<u256>> {{
             // DO NOT EDIT THIS FUNCTION UNLESS YOU KNOW WHAT YOU ARE DOING.
@@ -159,7 +158,7 @@ mod Groth16Verifier{curve_id.name} {{
     create_directory(src_dir)
 
     with open(os.path.join(output_folder_path, ".tools-versions"), "w") as f:
-        f.write("scarb 2.8.4\n")
+        f.write("scarb 2.9.1\n")
 
     with open(os.path.join(src_dir, "groth16_verifier_constants.cairo"), "w") as f:
         f.write(constants_code)
@@ -199,10 +198,13 @@ edition = "2024_07"
 
 [dependencies]
 garaga = {{ {dep} }}
-starknet = "2.8.4"
+starknet = "2.9.1"
 
 [cairo]
 sierra-replace-ids = false
+
+[dev-dependencies]
+cairo_test = "2.9.1"
 
 [[target.starknet-contract]]
 casm = true
